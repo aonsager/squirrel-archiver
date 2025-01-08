@@ -1,6 +1,6 @@
 # Squirrel
 
-![Squirrel](squirrel.jpg?raw=true)
+![Squirrel](squirrel.png?raw=true)
 
 A simple script that saves article text into a local folder for archive and search.  
 I will be writing a blog post about the motivation behind this project.
