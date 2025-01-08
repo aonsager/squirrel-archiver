@@ -1,5 +1,7 @@
 # Squirrel
 
+![Squirrel](squirrel.jpg?raw=true)
+
 A simple script that saves article text into a local folder for archive and search.  
 I will be writing a blog post about the motivation behind this project.
 
@@ -8,8 +10,8 @@ Disclaimer: I wrote this just for my personal use, so it's probably written fair
 # Installation
 
 ```
-git clone <repo>
-cd <repo>
+git clone git@github.com:aonsager/squirrel-archiver.git
+cd squirrel-archiver
 pip install virtualenv
 virtualenv venv
 source venv/bin/activate
@@ -18,9 +20,9 @@ pip install -r requirements.txt
 
 # Usage
 
-By default the script will look at a specified folder in your Safari bookmarks and process each URL there. After processing successfully, the bookmark will be removed from the folder.
-
 ```python squirrel.py```
+
+By default the script will look at a specified folder in your Safari bookmarks (default is "Squirrel") and process each URL there. After processing successfully, the bookmark will be removed from the folder.
 
 The bookmark folder is specified inside the script with `BOOKMARKS_FOLDER_NAME` and the current date is used as the saved date.
 
@@ -42,8 +44,8 @@ It may be worth it to at least have some sort of detection for when intervention
 I have a function that uses ChatGPT to generate summaries for each article, as well as 10 tags based on the content. Both of these are included in the YAML front matter.
 
 ## ChatGPT usage
-Creating the OpenAI object looks for an `OPENAI_API_KEY` environment variable, so be sure to set this if you're going to be using it ([docs reference](https://github.com/openai/openai-python)).
+Creating the OpenAI object looks for an `OPENAI_API_KEY` environment variable, so be sure to set this if you're going to be using it ([docs reference](https://github.com/openai/openai-python?tab=readme-ov-file#usage)).
 
 # Browse and search
 
-I open the directory in Obsidian, which lets me search the contents, and see a graph of connected pages via common tags.
+I open the directory in [Obsidian](https://obsidian.md), which lets me search the contents, and see a graph of connected pages via common tags.
