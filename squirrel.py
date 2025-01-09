@@ -4,7 +4,8 @@ import json
 import plistlib
 import requests
 import argparse
-from urllib.parse import urlparse
+import re
+from urllib.parse import urlparse, parse_qs
 from datetime import date
 import logging
 from string import Template
@@ -49,6 +50,30 @@ def get_bookmarks(folder_name):
     urls = [item.get('URLString') for item in folder if item.get('WebBookmarkType') == 'WebBookmarkTypeLeaf']
     return urls
 
+def extract_youtube_video_id(url):
+    # Check if the URL is a valid YouTube link
+    youtube_domains = ['youtube.com', 'youtu.be']
+    parsed_url = urlparse(url)
+    
+    if any(domain in parsed_url.netloc for domain in youtube_domains):
+        # Handle standard YouTube URLs
+        if 'youtube.com' in parsed_url.netloc:
+            query_params = parse_qs(parsed_url.query)
+            return query_params.get('v', [None])[0]
+        # Handle shortened YouTube URLs
+        elif 'youtu.be' in parsed_url.netloc:
+            return parsed_url.path.lstrip('/')
+    return None
+
+def get_youtube_transcript(youtube_id):
+    from youtube_transcript_api import YouTubeTranscriptApi
+    summary = ""
+    srt = YouTubeTranscriptApi.get_transcript(youtube_id)
+    for i in srt:
+        summary += f"{i["text"]}\n"
+
+    return summary
+
 def fetch_content(url):
     try:
         response = requests.get(url)
@@ -56,7 +81,15 @@ def fetch_content(url):
         logging.error(f"  Error occurred while making a request to {url}: {e}")
         return None
     doc = Document(response.text)
-    return html2text(doc.summary()), doc.title().replace('/', '_')
+    title = doc.title().replace('/', '_').replace(':', '-')
+
+    # If it's a youtube video, use the transcript for the article body
+    youtube_id = extract_youtube_video_id(url)
+    if youtube_id:
+        summary = get_youtube_transcript(youtube_id)
+    else:
+        summary = html2text(doc.summary())
+    return summary, title
 
 def query_openai(content):
     response = openai_client.chat.completions.create(
