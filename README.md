@@ -30,6 +30,10 @@ Alternatively, you can specify a URL directly, as well as a saved date.
 
 ```python squirrel.py -u https://www.example.com -d 2000-01-01```
 
+## YouTube videos
+
+For YouTube videos, the script will automatically get the transcript of the video and use it for the article text. This is a pretty useful way to extract data from a video and make it searchable.
+
 # Archiving
 
 You can modify `template.md` to change the format of the file that is saved. There is some basic YAML front matter, followed by the main article body.
