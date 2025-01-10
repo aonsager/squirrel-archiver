@@ -70,7 +70,7 @@ def get_youtube_transcript(youtube_id):
     summary = ""
     srt = YouTubeTranscriptApi.get_transcript(youtube_id)
     for i in srt:
-        summary += f"{i["text"]}\n"
+        summary += f"{i['text']}\n"
 
     return summary
 
@@ -139,7 +139,7 @@ def create_output_file(data, year, month):
     tags_yaml = "\n".join([f"  - {tag.lower().replace(' ', '_')}" for tag in data['tags']])
     data['tags_yaml'] = tags_yaml
     output = template.substitute(data)
-    output_path = os.path.join(output_folder(year, month), f"{data["title"]}.md")
+    output_path = os.path.join(output_folder(year, month), f"{data['title']}.md")
     with open(output_path, 'w') as f:
         f.write(output)
 
