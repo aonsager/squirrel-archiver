@@ -133,15 +133,19 @@ def query_openai(content):
     summary, tags = result["summary"], result["tags"]
     return summary, tags
 
+def get_output_path(title, year, month):
+    return os.path.join(output_folder(year, month), f"{title}.md")
+
 def create_output_file(data, year, month):
     with open(TEMPLATE_PATH) as f:
         template = Template(f.read())
     tags_yaml = "\n".join([f"  - {tag.lower().replace(' ', '_')}" for tag in data['tags']])
     data['tags_yaml'] = tags_yaml
     output = template.substitute(data)
-    output_path = os.path.join(output_folder(year, month), f"{data['title']}.md")
+    output_path = get_output_path(data['title'], year, month)
     with open(output_path, 'w') as f:
         f.write(output)
+    
 
 def delete_bookmark(folder_name, url_to_remove):
     # Remove a URL from a specific folder in Safari's Bookmarks.plist.
@@ -193,21 +197,29 @@ def main():
     for url in urls:
         try:
             logging.info(f"Processing URL: {url}")
-            logging.info(f"  fetching content")
-            content, title = fetch_content(url)
-            summary, tags = query_openai(content)
-            domain = urlparse(url).netloc
-            data = {
-                "title": title,
-                "url": url,
-                "domain": domain,
-                "summary": summary,
-                "tags": tags,
-                "saved_date": date_string,
-                "content": content
-            }
-            logging.info(f"  creating output file")
-            create_output_file(data, date_string.split("-")[0], date_string.split("-")[1])
+            year = date_string.split("-")[0]
+            month = date_string.split("-")[1]
+            output_path = get_output_path(url, year, month)
+
+            # Check if the URL is already processed
+            if os.path.exists(output_path):
+                logging.info(f"  URL already processed")
+            else:
+                logging.info(f"  fetching content")
+                content, title = fetch_content(url)
+                summary, tags = query_openai(content)
+                domain = urlparse(url).netloc
+                data = {
+                    "title": title,
+                    "url": url,
+                    "domain": domain,
+                    "summary": summary,
+                    "tags": tags,
+                    "saved_date": date_string,
+                    "content": content
+                }
+                logging.info(f"  creating output file")
+                create_output_file(data, date_string.split("-")[0], date_string.split("-")[1])
             if args.url is None:
                 delete_bookmark(BOOKMARKS_FOLDER_NAME, url)
             logging.info(f"  Successfully processed: {url}")
