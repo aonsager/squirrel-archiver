@@ -14,7 +14,7 @@ from html2text import html2text
 from openai import OpenAI
 
 # Configure logging
-logging.basicConfig(filename='script.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 openai_client = OpenAI()
 
