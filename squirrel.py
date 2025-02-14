@@ -14,8 +14,6 @@ from openai import OpenAI
 # Configure logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-openai_client = OpenAI()
-
 # Paths
 TEMPLATE_PATH = 'template.md'
 current_date = date.today()
@@ -72,6 +70,7 @@ def fetch_content(url):
     return summary, title
 
 def query_openai(content):
+    openai_client = OpenAI()
     response = openai_client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
