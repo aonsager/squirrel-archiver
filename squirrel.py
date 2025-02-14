@@ -1,10 +1,8 @@
 import sys
 import os
 import json
-import plistlib
 import requests
 import argparse
-import re
 from urllib.parse import urlparse, parse_qs
 from datetime import date
 import logging
@@ -19,10 +17,10 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s -
 openai_client = OpenAI()
 
 # Paths
-BOOKMARKS_PLIST_PATH = os.path.expanduser('~/Library/Safari/Bookmarks.plist')
-BOOKMARKS_FOLDER_NAME = 'Squirrel'
 TEMPLATE_PATH = 'template.md'
 current_date = date.today()
+URLS_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/urls.txt')
+BADURLS_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/badurls.txt')
 OUTPUT_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/')
 
 
@@ -31,24 +29,6 @@ def output_folder(year, month):
     if not os.path.exists(folder):
         os.makedirs(folder)
     return folder
-
-def get_bookmarks(folder_name):
-    # Retrieve URLs from the specified Safari bookmarks folder.
-    with open(BOOKMARKS_PLIST_PATH, 'rb') as f:
-        plist_data = plistlib.load(f)
-    
-    def find_folder(bookmarks, folder_name):
-        #Recursively search for the folder in the bookmarks.
-        for item in bookmarks:
-            if item.get('Title') == folder_name and item.get('WebBookmarkType') == 'WebBookmarkTypeList':
-                return item.get('Children', [])
-        return []
-
-    # Find the folder and extract URLs
-    root = plist_data.get('Children', [])
-    folder = find_folder(root, folder_name)
-    urls = [item.get('URLString') for item in folder if item.get('WebBookmarkType') == 'WebBookmarkTypeLeaf']
-    return urls
 
 def extract_youtube_video_id(url):
     # Check if the URL is a valid YouTube link
@@ -145,34 +125,6 @@ def create_output_file(data, year, month):
     output_path = get_output_path(data['title'], year, month)
     with open(output_path, 'w') as f:
         f.write(output)
-    
-
-def delete_bookmark(folder_name, url_to_remove):
-    # Remove a URL from a specific folder in Safari's Bookmarks.plist.
-    with open(BOOKMARKS_PLIST_PATH, 'rb') as f:
-        plist_data = plistlib.load(f)
-
-    def find_and_remove(bookmarks, folder_name, url):
-        # Recursively find the folder and remove the URL.
-        for item in bookmarks:
-            # Check if the item is the target folder
-            if item.get('Title') == folder_name and item.get('WebBookmarkType') == 'WebBookmarkTypeList':
-                # Filter out the URL to remove
-                item['Children'] = [child for child in item['Children'] if child.get('URLString') != url]
-                return True  # Found and removed the URL
-            # Recursively check nested folders
-            if 'Children' in item:
-                if find_and_remove(item['Children'], folder_name, url):
-                    return True
-        return False
-
-    # Attempt to find and remove the URL
-    if find_and_remove(plist_data['Children'], folder_name, url_to_remove):
-        with open(BOOKMARKS_PLIST_PATH, 'wb') as f:
-            plistlib.dump(plist_data, f)
-        logging.info(f"  Successfully removed {url_to_remove} from folder '{folder_name}'.")
-    else:
-        logging.info(f"  URL {url_to_remove} not found in folder '{folder_name}'.")
 
 def main():
     parser = argparse.ArgumentParser(description="By default, will look at a specified folder in your Safari bookmarks and process each URL with today's date.\nYou have the option to manually provide a url and date.")
@@ -189,9 +141,10 @@ def main():
     if args.url is not None:
         urls = [args.url]
     else:
-        urls = get_bookmarks(BOOKMARKS_FOLDER_NAME)
+        with open(URLS_PATH, 'r') as f:
+            urls = [line.strip() for line in f if line.strip()]
         if not urls:
-            logging.info("No URLs found in the bookmarks folder.")
+            logging.info("No URLs found in urls.txt")
             return
 
     for url in urls:
@@ -220,11 +173,15 @@ def main():
                 }
                 logging.info(f"  creating output file")
                 create_output_file(data, date_string.split("-")[0], date_string.split("-")[1])
-            if args.url is None:
-                delete_bookmark(BOOKMARKS_FOLDER_NAME, url)
             logging.info(f"  Successfully processed: {url}")
         except Exception as e:
+            with open(BADURLS_PATH, 'a') as badurls:
+                badurls.write(f"{url}\n")
             logging.error(f"  Error processing {url}: {e}, occurred at {e.__traceback__.tb_frame.f_globals['__file__']} line {e.__traceback__.tb_lineno}")
+
+    if args.url is None:
+            with open(URLS_PATH, 'w'):
+                pass
 
 if __name__ == "__main__":
     main()
