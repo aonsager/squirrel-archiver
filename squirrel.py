@@ -61,7 +61,7 @@ def extract_youtube_video_id(url):
 def get_youtube_transcript(youtube_id):
     from youtube_transcript_api import YouTubeTranscriptApi
     summary = ""
-    srt = YouTubeTranscriptApi.get_transcript(youtube_id)
+    srt = YouTubeTranscriptApi.get_transcript(youtube_id, languages=['en-US', 'en'])
     for i in srt:
         summary += f"{i['text']}\n"
 
@@ -141,6 +141,38 @@ def create_output_file(data, year, month):
     with open(output_path, 'w') as f:
         f.write(output)
 
+<<<<<<< HEAD
+=======
+def delete_bookmark(folder_name, url_to_remove):
+    # Remove a URL from a specific folder in Safari's Bookmarks.plist.
+    with open(BOOKMARKS_PLIST_PATH, 'rb') as f:
+        plist_data = plistlib.load(f)
+
+    def find_and_remove(bookmarks, folder_name, url):
+        # Recursively find the folder and remove the URL.
+        for item in bookmarks:
+            # Check if the item is the target folder
+            if item.get('Title') == folder_name and item.get('WebBookmarkType') == 'WebBookmarkTypeList':
+                # Filter out the URL to remove
+                item['Children'] = [child for child in item['Children'] if child.get('URLString') != url]
+                logging.info(f"  Removing {url_to_remove} from folder '{folder_name}'.")
+                return True  # Found and removed the URL
+            # Recursively check nested folders
+            if 'Children' in item:
+                if find_and_remove(item['Children'], folder_name, url):
+                    logging.info(f"  Removing {url_to_remove} from nested folder '{folder_name}'.")
+                    return True
+        return False
+
+    # Attempt to find and remove the URL
+    if find_and_remove(plist_data['Children'], folder_name, url_to_remove):
+        with open(BOOKMARKS_PLIST_PATH, 'wb') as f:
+            plistlib.dump(plist_data, f)
+        logging.info(f"  Successfully removed {url_to_remove} from folder '{folder_name}'.")
+    else:
+        logging.info(f"  URL {url_to_remove} not found in folder '{folder_name}'.")
+
+>>>>>>> ba1136b (specify language)
 def main():
     parser = argparse.ArgumentParser(description="By default, will look at a specified folder in your Safari bookmarks and process each URL with today's date.\nYou have the option to manually provide a url and date.")
     parser.add_argument('-u', '--url', help="Provide a single URL to process", type=str, default=None)
