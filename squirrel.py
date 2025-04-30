@@ -10,6 +10,9 @@ from string import Template
 from readability import Document
 from html2text import html2text
 from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +24,18 @@ URLS_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/urls.txt')
 BADURLS_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/badurls.txt')
 OUTPUT_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/')
 
+def notify(notification_type, notification_message):
+    match notification_type:
+        case 'info':
+            msg = notification_message
+        case 'error': 
+            msg = "🔴 ERROR <@122152084593311751>\n " + notification_message
+        case 'success':
+            msg = "🟢 SUCCESS <@122152084593311751>\n " + notification_message
+    url = f"https://discord.com/api/webhooks/{os.getenv('DISCORD_WEBHOOK_ID')}/{os.getenv('DISCORD_WEBHOOK_TOKEN')}"
+    data = {'content': msg}
+    headers = {'Content-type': 'application/json'}
+    r = requests.post(url, data=json.dumps(data), headers=headers)
 
 def output_folder(year, month):
     folder = f'{OUTPUT_PATH}/{year}/{month}/'
@@ -56,6 +71,7 @@ def fetch_content(url):
     try:
         response = requests.get(url)
     except requests.exceptions.RequestException as e:
+        notify('error', f"Error occurred while making a request to {url}: {e}")
         logging.error(f"  Error occurred while making a request to {url}: {e}")
         return None
     doc = Document(response.text)
@@ -143,6 +159,7 @@ def main():
         with open(URLS_PATH, 'r') as f:
             urls = [line.strip() for line in f if line.strip()]
         if not urls:
+            notify('info', "No URLs found in urls.txt")
             logging.info("No URLs found in urls.txt")
             return
 
@@ -172,10 +189,12 @@ def main():
                 }
                 logging.info(f"  creating output file")
                 create_output_file(data, date_string.split("-")[0], date_string.split("-")[1])
+                notify('success', f"Successfully processed: {url}")
             logging.info(f"  Successfully processed: {url}")
         except Exception as e:
             with open(BADURLS_PATH, 'a') as badurls:
                 badurls.write(f"{url}\n")
+            notify('error', f"Error processing {url}: {e}, occurred at {e.__traceback__.tb_frame.f_globals['__file__']} line {e.__traceback__.tb_lineno}")
             logging.error(f"  Error processing {url}: {e}, occurred at {e.__traceback__.tb_frame.f_globals['__file__']} line {e.__traceback__.tb_lineno}")
 
     if args.url is None:

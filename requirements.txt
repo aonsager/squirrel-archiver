@@ -4,3 +4,4 @@ html2text==2024.2.26
 openai==1.59.3
 lxml_html_clean==0.4.1
 youtube-transcript-api==0.6.3
+python-dotenv
