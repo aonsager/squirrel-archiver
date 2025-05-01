@@ -141,8 +141,6 @@ def create_output_file(data, year, month):
     with open(output_path, 'w') as f:
         f.write(output)
 
-<<<<<<< HEAD
-=======
 def delete_bookmark(folder_name, url_to_remove):
     # Remove a URL from a specific folder in Safari's Bookmarks.plist.
     with open(BOOKMARKS_PLIST_PATH, 'rb') as f:
@@ -172,7 +170,6 @@ def delete_bookmark(folder_name, url_to_remove):
     else:
         logging.info(f"  URL {url_to_remove} not found in folder '{folder_name}'.")
 
->>>>>>> ba1136b (specify language)
 def main():
     parser = argparse.ArgumentParser(description="By default, will look at a specified folder in your Safari bookmarks and process each URL with today's date.\nYou have the option to manually provide a url and date.")
     parser.add_argument('-u', '--url', help="Provide a single URL to process", type=str, default=None)
