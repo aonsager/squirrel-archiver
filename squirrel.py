@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import logging
+import requests
 from string import Template
 from urllib.parse import urlparse
 from dotenv import load_dotenv
@@ -17,6 +18,8 @@ AIRTABLE_BASE = os.getenv('AIRTABLE_BASE')
 AIRTABLE_TABLE = os.getenv('AIRTABLE_TABLE')
 TEMPLATE_PATH = 'template.md'
 OUTPUT_FOLDER = os.path.expanduser(f'~/Documents/Squirrel Archive/')
+GTS_URL = "https://gts.invisibleparade.com/api/v1/"
+GTS_TOKEN = os.getenv('GTS_TOKEN')
 
 def query_openai(content):
     openai_client = OpenAI()
@@ -108,6 +111,14 @@ def batch_delete_articles(article_ids):
     table = api.table(AIRTABLE_BASE, AIRTABLE_TABLE)
     table.batch_delete(article_ids)
     logging.info(f"Deleted {len(article_ids)} articles from Airtable")
+
+def post_to_gts(status_update):
+    gts_headers = {'Authorization': f'Bearer {GTS_TOKEN}'}
+    post_response = requests.post(GTS_URL + "statuses", headers=gts_headers, data={"status": status_update})
+    if post_response.status_code == 200:
+        logging.info("Posted to GTS successfully.")
+    else:
+        logging.error("Posting to GTS failed: " + post_response.text)
     
 
 def main():
@@ -133,12 +144,14 @@ def main():
     if len(processed_article_ids) > 0:
         batch_delete_articles(processed_article_ids)
 
-    print(f"{len(results["saved"])} articles saved: ")
-    print(f"{("\n").join(sorted(results["saved"]))}")
-    print(f"\n{len(results["skipped"])} articles skipped: ")
-    print(f"{("\n").join(sorted(results["skipped"]))}")
-    print(f"\n{len(results["failed"])} articles failed: ")
-    print(f"{("\n").join(sorted(results["failed"]))}")
+    status_update = f"{len(results["saved"])} articles saved: \n"
+    status_update += f"{("\n").join(sorted(results["saved"]))}"
+    status_update += f"\n\n{len(results["skipped"])} articles skipped: \n"
+    status_update += f"{("\n").join(sorted(results["skipped"]))}"
+    status_update += f"\n\n{len(results["failed"])} articles failed: \n"
+    status_update += f"{("\n").join(sorted(results["failed"]))}"
+
+    post_to_gts(status_update)
     
 
 if __name__ == "__main__":
