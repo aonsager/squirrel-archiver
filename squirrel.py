@@ -103,6 +103,11 @@ def create_output_file(article_data):
         logging.info(f"Wrote {output_path}")
         return 'saved'
         
+def batch_delete_articles(article_ids):
+    api = Api(AIRTABLE_API)
+    table = api.table(AIRTABLE_BASE, AIRTABLE_TABLE)
+    table.batch_delete(article_ids)
+    logging.info(f"Deleted {len(article_ids)} articles from Airtable")
     
 
 def main():
@@ -112,6 +117,7 @@ def main():
         "skipped": [],
         "failed": [],
     }
+    processed_article_ids = []
     for article in articles:
         try: 
             r = create_output_file(article['fields'])
@@ -119,9 +125,13 @@ def main():
                 results["saved"].append(article['fields']["URL"])
             elif r == 'skipped':
                 results["skipped"].append(article['fields']["URL"])
+            processed_article_ids.append(article["id"])
         except Exception as e:
             logging.error(f"{article['fields']['URL']}: {e}. Occurred at {e.__traceback__.tb_frame.f_globals['__file__']} line {e.__traceback__.tb_lineno}")
             results["failed"].append(f"{article['fields']['URL']}: {e}")
+
+    if len(processed_article_ids) > 0:
+        batch_delete_articles(processed_article_ids)
 
     print(f"{len(results["saved"])} articles saved: ")
     print(f"{("\n").join(sorted(results["saved"]))}")
