@@ -1,7 +1,7 @@
 import os
 import yaml
 
-OUTPUT_PATH = os.path.expanduser(f'~/Documents/Squirrel Archive/')
+OUTPUT_PATH = os.path.expanduser('~/Documents/Squirrel Archive/')
 
 def process_file(filepath):
     filepath = os.path.normpath(filepath)
@@ -12,7 +12,7 @@ def process_file(filepath):
 
     if not (filepath.endswith('.txt') or filepath.endswith('.md')):
         return
-    
+
     with open(filepath, 'r') as file:
         content = file.read()
 
@@ -26,7 +26,7 @@ def process_file(filepath):
         output_path = os.path.join(folder_path, f"{filename}")
 
         with open(output_path, 'w') as f:
-            f.write(content)  
+            f.write(content)
 
 for root, dirs, files in os.walk(OUTPUT_PATH):
     for file in files:

@@ -1,5 +1,5 @@
 import os
-import sys
+import traceback
 import json
 import logging
 import requests
@@ -17,7 +17,7 @@ AIRTABLE_API = os.getenv('AIRTABLE_API')
 AIRTABLE_BASE = os.getenv('AIRTABLE_BASE')
 AIRTABLE_TABLE = os.getenv('AIRTABLE_TABLE')
 TEMPLATE_PATH = 'template.md'
-OUTPUT_FOLDER = os.path.expanduser(f'~/Documents/Squirrel Archive/')
+OUTPUT_FOLDER = os.path.expanduser("~/Documents/Squirrel Archive/")
 GTS_URL = "https://gts.invisibleparade.com/api/v1/"
 GTS_TOKEN = os.getenv('GTS_TOKEN')
 
@@ -27,11 +27,11 @@ def query_openai(content):
         model="gpt-4o-mini",
         messages=[
             {
-                "role": "developer", 
+                "role": "developer",
                 "content": "You create brief summaries of online articles and provide tags based on the contents."
             },
             {
-                "role": "user", 
+                "role": "user",
                 "content": content
             }
         ],
@@ -59,16 +59,28 @@ def query_openai(content):
             }
         }
     )
-    
-    result = json.loads(response.choices[0].message.content)
-    summary, tags = result["summary"], result["tags"]
-    return summary, tags
+
+    if response.choices and response.choices[0].message and response.choices[0].message.content:
+        result = json.loads(response.choices[0].message.content)
+        summary, tags = result["summary"], result["tags"]
+        return summary, tags
+    else:
+        logging.error("OpenAI response did not contain expected content")
+        return "Summary unavailable", ["error"]
 
 def get_saved_articles():
-    api = Api(AIRTABLE_API)
-    table = api.table(AIRTABLE_BASE, AIRTABLE_TABLE)
-    articles = table.all()
-    return articles
+    if not AIRTABLE_API or not AIRTABLE_BASE or not AIRTABLE_TABLE:
+        logging.error("Missing required Airtable environment variables")
+        return []
+
+    try:
+        api = Api(api_key=AIRTABLE_API)
+        table = api.table(base_id=AIRTABLE_BASE, table_name=AIRTABLE_TABLE)
+        articles = table.all()
+        return articles
+    except Exception as e:
+        logging.error(f"Error fetching articles from Airtable: {e}")
+        return []
 
 def create_output_path(article_data):
     folder_path = f'{OUTPUT_FOLDER}{article_data["Domain"]}/'
@@ -82,7 +94,7 @@ def create_output_file(article_data):
     output_path = create_output_path(article_data)
     if os.path.exists(output_path):
         logging.info(f"{output_path} already exists, skipping...")
-        return 'skipped'     
+        return 'skipped'
 
     summary, tags = query_openai(article_data["Article text"])
     tags_yaml = "\n".join([f"  - {tag.lower().replace(' ', '_')}" for tag in tags])
@@ -100,17 +112,24 @@ def create_output_file(article_data):
     with open(TEMPLATE_PATH) as f:
         template = Template(f.read())
     output = template.substitute(data)
-     
+
     with open(output_path, 'w') as f:
         f.write(output)
         logging.info(f"Wrote {output_path}")
         return 'saved'
-        
+
 def batch_delete_articles(article_ids):
-    api = Api(AIRTABLE_API)
-    table = api.table(AIRTABLE_BASE, AIRTABLE_TABLE)
-    table.batch_delete(article_ids)
-    logging.info(f"Deleted {len(article_ids)} articles from Airtable")
+    if not AIRTABLE_API or not AIRTABLE_BASE or not AIRTABLE_TABLE:
+        logging.error("Missing required Airtable environment variables")
+        return
+
+    try:
+        api = Api(api_key=AIRTABLE_API)
+        table = api.table(base_id=AIRTABLE_BASE, table_name=AIRTABLE_TABLE)
+        table.batch_delete(article_ids)
+        logging.info(f"Deleted {len(article_ids)} articles from Airtable")
+    except Exception as e:
+        logging.error(f"Error deleting articles from Airtable: {e}")
 
 def post_to_gts(status_update):
     gts_headers = {'Authorization': f'Bearer {GTS_TOKEN}'}
@@ -119,7 +138,7 @@ def post_to_gts(status_update):
         logging.info("Posted to GTS successfully.")
     else:
         logging.error("Posting to GTS failed: " + post_response.text)
-    
+
 
 def main():
     articles = get_saved_articles()
@@ -130,7 +149,7 @@ def main():
     }
     processed_article_ids = []
     for article in articles:
-        try: 
+        try:
             r = create_output_file(article['fields'])
             if r == 'saved':
                 results["saved"].append(article['fields']["URL"])
@@ -138,21 +157,22 @@ def main():
                 results["skipped"].append(article['fields']["URL"])
             processed_article_ids.append(article["id"])
         except Exception as e:
-            logging.error(f"{article['fields']['URL']}: {e}. Occurred at {e.__traceback__.tb_frame.f_globals['__file__']} line {e.__traceback__.tb_lineno}")
+            error_info = traceback.format_exc()
+            logging.error(f"{article['fields']['URL']}: {e}\n{error_info}")
             results["failed"].append(f"{article['fields']['URL']}: {e}")
 
     if len(processed_article_ids) > 0:
         batch_delete_articles(processed_article_ids)
 
-    status_update = f"{len(results["saved"])} articles saved: \n"
-    status_update += f"{("\n").join(sorted(results["saved"]))}"
-    status_update += f"\n\n{len(results["skipped"])} articles skipped: \n"
-    status_update += f"{("\n").join(sorted(results["skipped"]))}"
-    status_update += f"\n\n{len(results["failed"])} articles failed: \n"
-    status_update += f"{("\n").join(sorted(results["failed"]))}"
+    status_update = f"{len(results['saved'])} articles saved: \n"
+    status_update += ("\n").join(sorted(results['saved']))
+    status_update += f"\n\n{len(results['skipped'])} articles skipped: \n"
+    status_update += ("\n").join(sorted(results['skipped']))
+    status_update += f"\n\n{len(results['failed'])} articles failed: \n"
+    status_update += ("\n").join(sorted(results['failed']))
 
     post_to_gts(status_update)
-    
+
 
 if __name__ == "__main__":
     main()
